@@ -8,7 +8,7 @@ import { Server } from 'socket.io'
 
 // Folders
 import { router } from './routes/index.js'
-import { ifCond } from './helpers/hbs-helper.js'
+import { ifCond, formatTime } from './helpers/hbs-helper.js'
 import { passport } from './config/passport.js'
 import { User } from './models/user.js'
 import { publicChat } from './models/publicChat.js'
@@ -17,15 +17,17 @@ import { privateChat } from './models/privateChat.js'
 // Variables
 const app = express() // 建立express app
 const server = createServer(app) // 建立http server instance 帶入 express app
-export const io = new Server(server)
+const io = new Server(server)
 const onlineUser = new Map()
 const sessionMiddleware = expressSession({
+  name: 'MY_SESSION',
   secret: 'abcdefg',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: { maxAge: 1200000 }
 })
 
-app.engine('hbs', engine({ defaultLayout: 'main', extname: '.hbs', helpers: { ifCond } }))
+app.engine('hbs', engine({ defaultLayout: 'main', extname: '.hbs', helpers: { ifCond, formatTime } }))
 app.set('view engine', 'hbs')
 
 app.use(express.static('public'))
@@ -40,10 +42,11 @@ io.on('connection', async (socket) => {
   const session = socket.request.session
   const currentUserId = session.passport?.user
 
-  // 是否通過passport驗證
+  // 是否通過passport驗證，避免未登入者顯示在其他使用者畫面上
   if (currentUserId) {
-    // 所有登入使用者自動加入'public'房間
-    socket.join('public')
+    // 所有登入使用者自動加入'public'房間，與使用者ID的房間
+    socket.join(['public', currentUserId])
+    console.log('in rooms: ', socket.rooms, ' ', socket.id)
 
     const userId = session.passport.user
     // 從DB拿資料，不拿password欄位，返回js物件非mongoose document
@@ -54,18 +57,32 @@ io.on('connection', async (socket) => {
       // 將使用者加入onlineUser
       onlineUser.set(userId, { ...user, _id: user._id.toString() })
       // 通知public房間的所有客戶端'add onlineUser'事件，傳入user資料
-      io.to('public').emit('add onlineUser', user)
+      socket.to('public').emit('add onlineUser', user)
     }
   }
 
-  socket.on('post message', async ({ msg, roomId, userId }) => {
+  socket.on('post message', async ({ msg, roomId, senderId }) => {
     try {
       if (roomId === 'public') {
-        const message = await publicChat.create({ content: msg, sender: userId })
-        io.to(roomId).emit('add message', { message, userId: currentUserId, roomId })
-        console.log(roomId, msg, userId, message)
+        // 對public房間發送訊息
+        const message = await publicChat.create({ content: msg, sender: senderId })
+        const time = formatTime(message.createdAt)
+        io.to('public').emit('add message', {
+          message: { ...message.toJSON(), createdAt: time },
+          senderId: currentUserId,
+          roomId
+        })
       }
+
       if (roomId !== 'public') {
+        // 發送私人訊息
+        const receiverId = roomId // 訊息接收者
+        const [sender, receiver] = await Promise.all([
+          User.findById(senderId, 'name, email', { lean: true }),
+          User.findById(receiverId, 'name, email', { lean: true })
+        ])
+        if (!sender || !receiver) throw new Error('使用者不存在 !')
+
         console.log(socket.request)
         // const message = await privateChat.create({ content: msg, sender: userId })
       }
@@ -103,6 +120,10 @@ io.on('connection', async (socket) => {
   // 監聽'disconnect'事件
   socket.on('disconnect', () => {
     console.log('socket:', socket.id, 'disconnected')
+  })
+
+  socket.on('disconnecting', () => {
+    console.log('leave room: ', socket.rooms) // the Set contains at least the socket ID
   })
 })
 

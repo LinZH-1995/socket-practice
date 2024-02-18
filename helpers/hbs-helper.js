@@ -1,6 +1,12 @@
+import dayjs from 'dayjs'
+
 function ifCond (a, b, options) {
   console.log('----------', a.toString(), b.toString())
   return a.toString() === b.toString() ? options.fn(this) : options.inverse(this)
 }
 
-export { ifCond }
+function formatTime (time) {
+  return dayjs(time).format('YYYY-MM-DD HH:mm')
+}
+
+export { ifCond, formatTime }

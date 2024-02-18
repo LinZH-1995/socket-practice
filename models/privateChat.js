@@ -2,7 +2,7 @@ import { Schema, mongoose } from '../config/mongoose.js'
 
 const privateChatSchema = new Schema({
   content: {
-    type: String,
+    type: Array,
     required: true
   },
 

@@ -46,7 +46,7 @@ io.on('connection', async (socket) => {
   if (currentUserId) {
     // 所有登入使用者自動加入'public'房間，與使用者ID的房間
     socket.join(['public', currentUserId])
-    console.log('in rooms: ', socket.rooms, ' ', socket.id)
+    console.log('in rooms: ', socket.rooms, 'this socketid: ', socket.id)
 
     const userId = session.passport.user
     // 從DB拿資料，不拿password欄位，返回js物件非mongoose document
@@ -66,8 +66,8 @@ io.on('connection', async (socket) => {
       if (roomId === 'public') {
         // 對public房間發送訊息
         const message = await publicChat.create({ content: msg, sender: senderId })
-        const time = formatTime(message.createdAt)
-        io.to('public').emit('add message', {
+        const time = formatTime(message.createdAt) // format time YYYY-MM-DD HH:mm
+        io.to('public').emit('add public message', {
           message: { ...message.toJSON(), createdAt: time },
           senderId: currentUserId,
           roomId
@@ -78,13 +78,20 @@ io.on('connection', async (socket) => {
         // 發送私人訊息
         const receiverId = roomId // 訊息接收者
         const [sender, receiver] = await Promise.all([
-          User.findById(senderId, 'name, email', { lean: true }),
-          User.findById(receiverId, 'name, email', { lean: true })
+          User.findById(senderId, '-password', { lean: true }),
+          User.findById(receiverId, '-password', { lean: true })
         ])
-        if (!sender || !receiver) throw new Error('使用者不存在 !')
 
-        console.log(socket.request)
-        // const message = await privateChat.create({ content: msg, sender: userId })
+        if (!sender || !receiver) throw new Error('使用者不存在 !')
+        const message = await privateChat.create({ content: msg, sender: senderId, receiver: receiverId })
+        const time = formatTime(message.createdAt) // format time YYYY-MM-DD HH:mm
+
+        // 對receiverId, sender所在房間各自發送更新訊息事件
+        io.to([receiverId, senderId]).emit('add private message', {
+          message: { ...message.toJSON(), createdAt: time },
+          senderId,
+          roomId
+        })
       }
     } catch (error) {
       console.log(error)

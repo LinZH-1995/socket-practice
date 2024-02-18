@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Socket.IO chat</title>
+  <style>
+    body {
+      margin: 0;
+      padding-bottom: 3rem;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #form {
+      background: rgba(0, 0, 0, 0.15);
+      padding: 0.25rem;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      height: 3rem;
+      box-sizing: border-box;
+      backdrop-filter: blur(10px);
+    }
+
+    #input {
+      border: none;
+      padding: 0 1rem;
+      flex-grow: 1;
+      border-radius: 2rem;
+      margin: 0.25rem;
+    }
+
+    #input:focus {
+      outline: none;
+    }
+
+    #form>button {
+      background: #333;
+      border: none;
+      padding: 0 1rem;
+      margin: 0.25rem;
+      border-radius: 3px;
+      outline: none;
+      color: #fff;
+    }
+
+    #messages {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    #messages>li {
+      padding: 0.5rem 1rem;
+    }
+
+    #messages>li:nth-child(odd) {
+      background: #efefef;
+    }
+  </style>
+</head>
+
+<body>
+  <ul id="messages"></ul>
+  <form id="form" action="">
+    <input id="input" autocomplete="off" /><button>Send</button>
+    <button id="disconnect-btn">Disconnect</button>
+  </form>
+</body>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  // 建立客戶端socket
+  const socket = io({
+    auth: { serverOffset: 0 }
+  })
+
+  const form = document.querySelector('#form') // 選取 id=form 元素
+  const input = document.querySelector('#input') // 選取 id=input 元素
+  const messages = document.querySelector('#messages') // 選取 id=messages 元素
+  const disconnectButton = document.querySelector('#disconnect-btn') // 選取 id=disconnect-btn 元素
+
+  // 對選取的元素掛載監聽器，監聽'submit'事件
+  form.addEventListener('submit', (e) => {
+    e.preventDefault() // 取消瀏覽器預設行為，submit事件為取消頁面刷新
+
+    if (input.value) {
+      // 如果事件觸發時，input有value，客戶端發送'chat message'事件給server端並帶入value
+      const data = {
+        userId: 1,
+        message: input.value.trim()
+      }
+      socket.emit('chat message', data)
+      // 清空value
+      input.value = ''
+    }
+  })
+
+  // 對選取的元素掛載監聽器，監聽'click'事件
+  disconnectButton.addEventListener('click', (e) => {
+    e.preventDefault()
+
+    // 檢查客戶端是否連線
+    if (socket.connected) {
+      disconnectButton.innerText = 'Connect'
+      socket.disconnect() // 客戶端取消連線
+    } else {
+      disconnectButton.innerText = 'Disconnect'
+      socket.connect() // 客戶端連線
+    }
+  })
+
+  // 客戶端socket監聽'chat message'事件，以接收server端發送的'chat message'事件
+  socket.on('chat message', (data) => {
+    // 創建html <li>元素
+    const item = document.createElement('li')
+
+    // 將'chat message'事件所接收到的訊息插入新元素中
+    item.textContent = data.message
+
+    // 將新元素插入選取的messages元素最底部
+    messages.appendChild(item)
+
+    // 瀏覽器視窗自動滾動自最底部，x=0、y=文檔內容高度
+    window.scrollTo(0, document.body.scrollHeight)
+  })
+
+</script>
+
+</html>

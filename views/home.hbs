@@ -1,0 +1,73 @@
+<div class="container py-5">
+  <div class="row">
+    <div class="col-3" style="height: 80vh;">
+      <ul class="nav nav-pills flex-column">
+        <li class="nav-item mb-2">
+          <a class="nav-link {{#ifCond roomId 'public'}}active{{/ifCond}}" href="/home">公開聊天室</a>
+        </li>
+        {{#each onlineUser}}
+        {{#ifCond ../user._id this._id}}
+        {{else}}
+        <li class="nav-item mb-2 li{{this._id}}">
+          {{!-- 使用 '../'跳出each迴圈取得外部變數 --}}
+          <a class="nav-link {{#ifCond ../roomId this._id}}active{{/ifCond}}" href="/messages/t/{{this._id}}"
+            data-user-id="{{this._id}}">
+            {{this.name}}
+          </a>
+        </li>
+        {{/ifCond}}
+        {{/each}}
+      </ul>
+    </div>
+
+    <div id="chat-room" class="col-9 chat-room" style="height: 70vh;" data-room-id="{{roomId}}">
+      <div class="title">
+        {{#ifCond roomId 'public'}}
+        <p>公開聊天室</p>
+        {{else}}
+        <p>{{roomName}}</p>
+        {{/ifCond}}
+        <input type="hidden" class="selector" value="public">
+      </div>
+
+      <div class="flex-container chat-messages" id="chat-messages">
+        {{#each messages}}
+        {{#ifCond ../user._id this.sender}}
+        <div class="send-messages d-flex flex-column align-items-end mb-3">
+          <div class="send-message">
+            {{!-- this.content = ['msg', 'msg', ...] --}}
+            {{#each this.content}}
+            {{!-- this = 'msg' --}}
+            {{this}}<br>
+            {{/each}}
+          </div>
+          <div class="time text-muted"><span>{{this.createdAt}}</span></div>
+        </div>
+        {{else}}
+        <div class="receive-messages d-flex flex-column align-items-start mb-3">
+          <div class="receive-message">
+            {{!-- this.content = ['msg', 'msg', ...] --}}
+            {{#each this.content}}
+            {{!-- this = 'msg' --}}
+            {{this}}<br>
+            {{/each}}
+          </div>
+          <div class="time text-muted"><span>{{this.createdAt}}</span></div>
+        </div>
+        {{/ifCond}}
+        {{/each}}
+      </div>
+
+      <form id="chat-form">
+        <div class="messageArea d-flex">
+          <textarea type="text" placeholder="輸入訊息..." class="form-control" id="input" name="message" rows="2"
+            wrap="soft" maxlength="1000" onkeyup="submitMessage(event)" onkeydown="cancelNewLine(event)"
+            data-room-id="{{roomId}}" data-user-id="{{user._id}}"></textarea>
+          <button type="submit" class="btn">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

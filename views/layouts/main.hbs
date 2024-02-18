@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+  <link rel="stylesheet" href="/stylesheets/style.css">
+  <script src="https://kit.fontawesome.com/2a9bb43fc7.js" crossorigin="anonymous"></script>
+  <title>Socket.IO chat</title>
+</head>
+
+<body>
+
+  <header>
+    <nav class="navbar navbar-expand-lg fixed-top navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand fs-3 fw-bold ms-5" href="/">首頁</a>
+
+        <div class="d-flex me-2" role="search">
+          <div class="text-white me-3 my-auto">
+            {{#if isAuthenticated}}{{user.name}}{{else}}使用者{{/if}} 您好
+          </div>
+          {{#if isAuthenticated}}
+          <a id="logout-button" href="/logout" class="btn btn-sm btn-outline-danger my-auto my-sm-0 logout-button"
+            data-user-id="{{user._id}}">Logout</a>
+          {{/if}}
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="mt-5">
+    {{{body}}}
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
+    crossorigin="anonymous"></script>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io()
+
+    // 綁定'click'事件給登出按鈕，當使用者按下登出時做甚麼
+    const logoutButton = document.querySelector('.logout-button')
+    if (logoutButton) {
+      logoutButton.addEventListener('click', function (e) {
+        const userId = e.target.dataset.userId
+        // 對server端發送'logout'事件，傳入使用者ID
+        socket.emit('logout', userId)
+      })
+    }
+
+    function submitMessage(e) {
+      // 如果按的是enter並且沒加shift = 送出訊息
+      if (e.key === 'Enter' && !e.shiftKey) {
+        const msg = e.target.value.trim().split(/\n/g)
+        const userId = e.target.dataset.userId
+        const roomId = e.target.dataset.roomId
+        socket.emit('post message', { msg, roomId, userId })
+        e.target.value = '' // 清空訊息
+      }
+    }
+
+    function cancelNewLine(e) {
+      // 如果按的是enter並且沒加shift = 使用者想送出訊息
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+      }
+      // 如果是enter + shift = 使用者想讓輸入的訊息換行
+    }
+
+    // 客戶端監聽'add onlineUser'事件
+    socket.on('add onlineUser', function (onlineUser) {
+      const currentUserId = document.querySelector('#logout-button').dataset.userId
+
+      // 確認不是上線的使用者收到此訊息，避免重複(上線使用者會自動取得最新畫面不必再次更新)
+      if (currentUserId !== onlineUser._id) {
+        // DOM操作更新畫面
+        const ul = document.querySelector('.nav-pills')
+        const li = document.createElement('li')
+        li.classList.add('nav-item', 'mb-2', `li${onlineUser._id}`)
+        li.innerHTML = `<a class="nav-link" href="/message/t/${onlineUser._id}">${onlineUser.name}</a>`
+        ul.appendChild(li)
+      }
+    })
+
+    // 客戶端監聽'remove onlineUser'事件
+    socket.on('remove onlineUser', function (logoutUserId) {
+      const item = document.querySelector(`.li${logoutUserId}`) // 選取li元素
+      item.remove() // 刪除元素
+    })
+
+    // 客戶端收到新增訊息事件
+    socket.on('add message', function ({ message, userId, roomId }) {
+      const chatMsgDOM = document.querySelector('#chat-messages')
+      const currentRoomId = document.querySelector('#chat-room').dataset.roomId
+      const currentUserId = document.querySelector('#logout-button').dataset.userId
+
+      // 確認使用者畫面是否跟收到的訊息發送房間一樣，一樣才更新畫面
+      if (currentRoomId === roomId) {
+        console.log(message.sender, currentUserId)
+        if (message.sender === currentUserId) {
+          // 本人發出的訊息
+          const msg = message.content.join('<br/>')
+          const div = document.createElement('div')
+          div.classList.add('send-messages', 'd-flex', 'flex-column', 'align-items-end', 'mb-3')
+          div.innerHTML = `<div class="send-message">${msg}</div>
+          <div class="time text-muted"><span>${message.createdAt}</span></div>`
+          chatMsgDOM.appendChild(div)
+        } else {
+          // 非本人發出的訊息
+          const msg = message.content.join('<br/>')
+          const div = document.createElement('div')
+          div.classList.add('receive-messages', 'd-flex', 'flex-column', 'align-items-start', 'mb-3')
+          div.innerHTML = `<div class="receive-message">${msg}</div>
+          <div class="time text-muted"><span>${message.createdAt}</span></div>`
+          chatMsgDOM.appendChild(div)
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>

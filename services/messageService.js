@@ -14,7 +14,7 @@ const messageService = {
             { sender: currentUserId, receiver: id },
             { sender: id, receiver: currentUserId }
           ]
-        }).lean()
+        }).lean().sort({ createdAt: 1 })
       ])
 
       console.log('id: ', id, 'cur: ', currentUserId, '||||', user, messages)

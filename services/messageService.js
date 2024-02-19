@@ -1,12 +1,24 @@
 import { User } from '../models/user.js'
+import { privateChat } from '../models/privateChat.js'
 
 const messageService = {
   getMessagePage: async (req, callback) => {
     try {
-      const id = req.params.id
-      const user = await User.findById(id, '-password', { lean: true })
-      console.log('id: ', id, user)
-      callback(null, { roomId: id, roomName: user.name })
+      const currentUserId = req.user._id // me
+      const id = req.params.id // user who i wish to talk
+
+      const [user, messages] = await Promise.all([
+        User.findById(id, '-password', { lean: true }),
+        privateChat.find({
+          $or: [
+            { sender: currentUserId, receiver: id },
+            { sender: id, receiver: currentUserId }
+          ]
+        }).lean()
+      ])
+
+      console.log('id: ', id, 'cur: ', currentUserId, '||||', user, messages)
+      callback(null, { roomId: id, roomName: user.name, messages })
     } catch (error) {
       callback(error, null)
     }

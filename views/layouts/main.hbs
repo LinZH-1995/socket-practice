@@ -154,6 +154,17 @@ console.log('test private msg: ', message, senderId, roomId, currentUserId, curr
           <div class="time text-muted"><span>${message.createdAt}</span></div>`
           chatMsgDOM.appendChild(div)
         }
+      } else {
+        // 當前客戶端為接收方
+        // 確認使用者是否還在此房間頁面
+        if (senderId === currentRoomId) {
+          const msg = message.content.join('<br/>')
+          const div = document.createElement('div')
+          div.classList.add('receive-messages', 'd-flex', 'flex-column', 'align-items-start', 'mb-3')
+          div.innerHTML = `<div class="receive-message">${msg}</div>
+          <div class="time text-muted"><span>${message.createdAt}</span></div>`
+          chatMsgDOM.appendChild(div)
+        }
       }
     })
   </script>

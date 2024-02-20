@@ -2,18 +2,21 @@
   <div class="row">
     <div class="col-3" style="height: 80vh;">
       <ul class="nav nav-pills flex-column">
-        <li class="nav-item mb-2">
-          <a class="nav-link {{#ifCond roomId 'public'}}active{{/ifCond}}" href="/home">公開聊天室</a>
+        <li class="nav-item mb-2 li-public">
+          <a class="nav-link {{#ifCond roomId 'public'}}active{{/ifCond}}" href="/home">
+            公開聊天室
+          </a>
         </li>
         {{#each onlineUser}}
         {{#ifCond ../user._id this._id}}
         {{!-- 如果是使用者自己，則不顯示任何東西，避免使用者對自己發訊息 --}}
         {{else}}
-        <li class="nav-item mb-2 li{{this._id}}">
+        <li class="nav-item mb-2 li-{{this._id}}">
           {{!-- 使用 '../'跳出each迴圈取得外部變數 --}}
           <a class="nav-link {{#ifCond ../roomId this._id}}active{{/ifCond}}" href="/messages/t/{{this._id}}"
             data-user-id="{{this._id}}">
             {{this.name}}
+            <div class="unread-msg-count my-auto">1</div>
           </a>
         </li>
         {{/ifCond}}

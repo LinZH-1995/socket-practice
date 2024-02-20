@@ -84,6 +84,53 @@
       // 如果是enter + shift = 使用者想讓輸入的訊息換行
     }
 
+    function addNotifyElement(messageType, senderId) {
+      // 公共訊息
+      if (messageType === 'public') {
+        // 使用者畫面不同，提示使用者有新訊息 (已有提示則不新增)
+        const notifyElement = document.querySelector('.li-public > a > div')
+        if (!notifyElement) {
+          const a = document.querySelector(`.li-public > a`)
+          const div = document.createElement('div')
+          div.classList.add('unread-msg-count', 'my-auto')
+          div.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i>`
+          a.appendChild(div)
+        }
+        return
+      }
+
+      // 私人訊息
+      const notifyElement = document.querySelector(`.li-${senderId} > a > div`)
+      // 已有通知element
+      if (notifyElement) {
+        const num = notifyElement.textContent // string num
+        notifyElement.textContent = Number(num) + 1
+      } else {
+        const a = document.querySelector(`.li-${senderId} > a`)
+        const div = document.createElement('div')
+        div.classList.add('unread-msg-count', 'my-auto')
+        a.appendChild(div)
+      }
+    }
+
+    function addSendMessagesElement (chatMsgDOM, message) {
+      const msg = message.content.join('<br/>')
+      const div = document.createElement('div')
+      div.classList.add('send-messages', 'd-flex', 'flex-column', 'align-items-end', 'mb-3')
+      div.innerHTML = `<div class="send-message">${msg}</div>
+          <div class="time text-muted"><span>${message.createdAt}</span></div>`
+      chatMsgDOM.appendChild(div)
+    }
+
+    function addReceiveMessagesElement(chatMsgDOM, message) {
+      const msg = message.content.join('<br/>')
+      const div = document.createElement('div')
+      div.classList.add('receive-messages', 'd-flex', 'flex-column', 'align-items-start', 'mb-3')
+      div.innerHTML = `<div class="receive-message">${msg}</div>
+          <div class="time text-muted"><span>${message.createdAt}</span></div>`
+      chatMsgDOM.appendChild(div)
+    }
+
     // 客戶端監聽'add onlineUser'事件
     socket.on('add onlineUser', function (onlineUser) {
       const currentUserId = document.querySelector('#logout-button').dataset.userId
@@ -93,15 +140,17 @@
         // DOM操作更新畫面
         const ul = document.querySelector('.nav-pills')
         const li = document.createElement('li')
-        li.classList.add('nav-item', 'mb-2', `li${onlineUser._id}`)
+        li.classList.add('nav-item', 'mb-2', `li-${onlineUser._id}`)
         li.innerHTML = `<a class="nav-link" href="/messages/t/${onlineUser._id}">${onlineUser.name}</a>`
         ul.appendChild(li)
+
+        // TODO: 取得新上線使用者未讀訊息數
       }
     })
 
     // 客戶端監聽'remove onlineUser'事件
     socket.on('remove onlineUser', function (logoutUserId) {
-      const item = document.querySelector(`.li${logoutUserId}`) // 選取li元素
+      const item = document.querySelector(`.li-${logoutUserId}`) // 選取li元素
       item.remove() // 刪除元素
     })
 
@@ -111,27 +160,22 @@
 
       // 當前客戶端是誰
       const currentUserId = document.querySelector('#logout-button').dataset.userId
+      // 當前使用者所在房間
+      const currentRoomId = document.querySelector('#inputArea').dataset.roomId
 
       // 確認使用者畫面是否跟收到的訊息發送房間一樣，一樣才更新畫面
-      if (roomId === 'public') {
+      if (currentRoomId === 'public') {
         if (senderId === currentUserId) {
           // 本人發出的訊息
-          const msg = message.content.join('<br/>')
-          const div = document.createElement('div')
-          div.classList.add('send-messages', 'd-flex', 'flex-column', 'align-items-end', 'mb-3')
-          div.innerHTML = `<div class="send-message">${msg}</div>
-          <div class="time text-muted"><span>${message.createdAt}</span></div>`
-          chatMsgDOM.appendChild(div)
+          addSendMessagesElement(chatMsgDOM, message)
         } else {
           // 非本人發出的訊息
-          const msg = message.content.join('<br/>')
-          const div = document.createElement('div')
-          div.classList.add('receive-messages', 'd-flex', 'flex-column', 'align-items-start', 'mb-3')
-          div.innerHTML = `<div class="receive-message">${msg}</div>
-          <div class="time text-muted"><span>${message.createdAt}</span></div>`
-          chatMsgDOM.appendChild(div)
+          addReceiveMessagesElement(chatMsgDOM, message)
         }
+        return
       }
+      
+      addNotifyElement('public', null)
     })
 
     // 客戶端收到新增 private 訊息事件
@@ -141,29 +185,21 @@
       const currentUserId = document.querySelector('#logout-button').dataset.userId
       // 當前所在房間頁面
       const currentRoomId = document.querySelector('#inputArea').dataset.roomId
-console.log('test private msg: ', message, senderId, roomId, currentUserId, currentRoomId)
+      console.log('test private msg: ', message, senderId, roomId, currentUserId, currentRoomId)
 
       // 發送者是當前客戶端
       if (senderId === currentUserId) {
         // 確認使用者是否還在此房間頁面
         if (roomId === currentRoomId) {
-          const msg = message.content.join('<br/>')
-          const div = document.createElement('div')
-          div.classList.add('send-messages', 'd-flex', 'flex-column', 'align-items-end', 'mb-3')
-          div.innerHTML = `<div class="send-message">${msg}</div>
-          <div class="time text-muted"><span>${message.createdAt}</span></div>`
-          chatMsgDOM.appendChild(div)
+          addSendMessagesElement(chatMsgDOM, message)
         }
       } else {
         // 當前客戶端為接收方
         // 確認使用者是否還在此房間頁面
         if (senderId === currentRoomId) {
-          const msg = message.content.join('<br/>')
-          const div = document.createElement('div')
-          div.classList.add('receive-messages', 'd-flex', 'flex-column', 'align-items-start', 'mb-3')
-          div.innerHTML = `<div class="receive-message">${msg}</div>
-          <div class="time text-muted"><span>${message.createdAt}</span></div>`
-          chatMsgDOM.appendChild(div)
+          addReceiveMessagesElement(chatMsgDOM, message)
+        } else {
+          addNotifyElement('private', senderId)
         }
       }
     })

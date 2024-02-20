@@ -8,13 +8,13 @@ const messageService = {
       const id = req.params.id // user who i wish to talk
 
       const [user, messages] = await Promise.all([
-        User.findById(id, '-password', { lean: true }),
+        User.findById(id, '-password', { lean: true }).exec(),
         privateChat.find({
           $or: [
             { sender: currentUserId, receiver: id },
             { sender: id, receiver: currentUserId }
           ]
-        }).lean().sort({ createdAt: 1 })
+        }).lean().sort({ createdAt: 1 }).exec()
       ])
 
       console.log('id: ', id, 'cur: ', currentUserId, '||||', user, messages)

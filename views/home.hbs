@@ -5,6 +5,12 @@
         <li class="nav-item mb-2 li-public">
           <a class="nav-link {{#ifCond roomId 'public'}}active{{/ifCond}}" href="/home">
             公開聊天室
+            {{!-- 有未讀public訊息，則顯示 --}}
+            {{#if user.publicNotify}}
+            <div class="unread-msg-count my-auto">
+              <i class="fa-solid fa-circle-exclamation"></i>
+            </div>
+            {{/if}}
           </a>
         </li>
         {{#each onlineUser}}

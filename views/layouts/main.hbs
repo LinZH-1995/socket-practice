@@ -84,7 +84,7 @@
       // 如果是enter + shift = 使用者想讓輸入的訊息換行
     }
 
-    function addNotifyElement(messageType, senderId) {
+    function addNotifyElement(messageType, senderId, currentUserId) {
       // 公共訊息
       if (messageType === 'public') {
         // 使用者畫面不同，提示使用者有新訊息 (已有提示則不新增)
@@ -95,6 +95,9 @@
           div.classList.add('unread-msg-count', 'my-auto')
           div.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i>`
           a.appendChild(div)
+
+          // 記錄使用者有public未讀訊息，避免畫面更新後消失
+          socket.emit('add user public message notify', { currentUserId })
         }
         return
       }
@@ -157,7 +160,6 @@
     // 客戶端收到新增 public 訊息事件
     socket.on('add public message', function ({ message, senderId, roomId }) {
       const chatMsgDOM = document.querySelector('#msgs')
-
       // 當前客戶端是誰
       const currentUserId = document.querySelector('#logout-button').dataset.userId
       // 當前使用者所在房間
@@ -175,7 +177,7 @@
         return
       }
       
-      addNotifyElement('public', null)
+      addNotifyElement('public', null, currentUserId)
     })
 
     // 客戶端收到新增 private 訊息事件
@@ -199,7 +201,7 @@
         if (senderId === currentRoomId) {
           addReceiveMessagesElement(chatMsgDOM, message)
         } else {
-          addNotifyElement('private', senderId)
+          addNotifyElement('private', senderId, null)
         }
       }
     })

@@ -98,6 +98,15 @@ io.on('connection', async (socket) => {
     }
   })
 
+  socket.on('add user public message notify', async ({ currentUserId }) => {
+    try {
+      const user = await User.findByIdAndUpdate(currentUserId, { publicNotify: true }, { new: true, lean: true })
+      if (!user) throw new Error('使用者不存在 !')
+    } catch (error) {
+      console.log(error)
+    }
+  })
+
   // 監聽'logout'事件，使用者登出時做甚麼
   socket.on('logout', async (userId) => {
     try {

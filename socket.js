@@ -33,38 +33,39 @@ function socketSetting (io) {
       }
     }
 
-    socket.on('post message', async ({ msg, roomId, senderId }) => {
+    socket.on('post public message', async ({ msg, roomId, senderId }) => {
       try {
-        if (roomId === 'public') {
-          // 對public房間發送訊息
-          const message = await publicChat.create({ content: msg, sender: senderId })
-          const time = formatTime(message.createdAt) // format time YYYY-MM-DD HH:mm
-          io.to('public').emit('add public message', {
-            message: { ...message.toJSON(), createdAt: time },
-            senderId: currentUserId,
-            roomId
-          })
-        }
+        // 對public房間發送訊息
+        const message = await publicChat.create({ content: msg, sender: senderId })
+        const time = formatTime(message.createdAt) // format time YYYY-MM-DD HH:mm
+        io.to('public').emit('add public message', {
+          message: { ...message.toJSON(), createdAt: time },
+          senderId: currentUserId,
+          roomId
+        })
+      } catch (error) {
+        console.log(error)
+      }
+    })
 
-        if (roomId !== 'public') {
-          // 發送私人訊息
-          const receiverId = roomId // 訊息接收者
-          const [sender, receiver] = await Promise.all([
-            User.findById(senderId, '-password', { lean: true }).exec(),
-            User.findById(receiverId, '-password', { lean: true }).exec()
-          ])
+    socket.on('post private message', async ({ msg, receiverId, senderId }) => {
+      try {
+        // 發送私人訊息
+        const [sender, receiver] = await Promise.all([
+          User.findById(senderId, '-password', { lean: true }).exec(),
+          User.findById(receiverId, '-password', { lean: true }).exec()
+        ])
 
-          if (!sender || !receiver) throw new Error('使用者不存在 !')
-          const message = await privateChat.create({ content: msg, sender: senderId, receiver: receiverId })
-          const time = formatTime(message.createdAt) // format time YYYY-MM-DD HH:mm
+        if (!sender || !receiver) throw new Error('使用者不存在 !')
+        const message = await privateChat.create({ content: msg, sender: senderId, receiver: receiverId })
+        const time = formatTime(message.createdAt) // format time YYYY-MM-DD HH:mm
 
-          // 對receiverId, sender所在房間各自發送更新訊息事件
-          io.to([receiverId, senderId]).emit('add private message', {
-            message: { ...message.toJSON(), createdAt: time },
-            senderId,
-            roomId
-          })
-        }
+        // 對receiverId, sender所在房間各自發送更新訊息事件
+        io.to([receiverId, senderId]).emit('add private message', {
+          message: { ...message.toJSON(), createdAt: time },
+          senderId,
+          receiverId
+        })
       } catch (error) {
         console.log(error)
       }

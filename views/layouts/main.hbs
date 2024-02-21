@@ -54,25 +54,31 @@
       })
     }
 
+    function postMessage(element) {
+      const msg = element.value.trim().split(/\n/g) //以換行符號分割訊息， ['msg', 'msg']
+      const senderId = element.dataset.senderId // 發送者是誰
+      const roomId = element.dataset.roomId // 對哪個房間發送消息，除public外，等同訊息receiverId
+      if (roomId === 'public') {
+        // 告訴server端，客戶端打算新增 public 訊息
+        socket.emit('post public message', { msg, roomId, senderId })
+      } else {
+        // 告訴server端，客戶端打算新增 private 訊息
+        socket.emit('post private message', { msg, receiverId: roomId, senderId })
+      }
+      element.value = '' // 清空訊息
+    }
+
     // 發送按鈕使用這個fn
     function submitMessageBtn(e) {
       const ele = document.querySelector('#inputArea') // <textarea id="#inputArea">...</textarea>
-      const msg = ele.value.trim().split(/\n/g) //以換行符號分割訊息， ['msg', 'msg']
-      const senderId = ele.dataset.senderId // 發送者是誰
-      const roomId = ele.dataset.roomId // 對哪個房間發送消息，除public外，等同訊息receiverId
-      socket.emit('post message', { msg, roomId, senderId }) // 告訴server端，客戶端打算新增訊息
-      ele.value = '' // 清空訊息
+      postMessage(ele)
     }
 
     // enter按鈕使用這個fn
     function submitMessage(e) {
       // 如果按的是enter並且沒加shift = 送出訊息
       if (e.key === 'Enter' && !e.shiftKey) {
-        const msg = e.target.value.trim().split(/\n/g)
-        const senderId = e.target.dataset.senderId // 發送者是誰
-        const roomId = e.target.dataset.roomId // 對哪個房間發送消息，除public外，等同訊息receiverId
-        socket.emit('post message', { msg, roomId, senderId }) // 告訴server端，客戶端打算新增訊息
-        e.target.value = '' // 清空訊息
+        postMessage(e.target)
       }
     }
 
@@ -189,23 +195,19 @@
     })
 
     // 客戶端收到新增 private 訊息事件
-    socket.on('add private message', function ({ message, senderId, roomId }) {
+    socket.on('add private message', function ({ message, senderId, receiverId }) {
       const chatMsgDOM = document.querySelector('#msgs')
       // 當前客戶端是誰
       const currentUserId = document.querySelector('#logout-button').dataset.userId
       // 當前所在房間頁面
       const currentRoomId = document.querySelector('#inputArea').dataset.roomId
-      console.log('test private msg: ', message, senderId, roomId, currentUserId, currentRoomId)
+      console.log('test private msg: ', message, senderId, receiverId, currentUserId, currentRoomId)
 
-      // 發送者是當前客戶端
-      if (senderId === currentUserId) {
-        // 確認使用者是否還在此房間頁面
-        if (roomId === currentRoomId) {
-          addSendMessagesElement(chatMsgDOM, message)
-        }
+      // 發送者是當前客戶端，並且確認使用者是否還在此房間頁面
+      if (senderId === currentUserId && receiverId === currentRoomId) {
+        addSendMessagesElement(chatMsgDOM, message)
       } else {
-        // 當前客戶端為接收方
-        // 確認使用者是否還在此房間頁面
+        // 當前客戶端為接收方，確認使用者是否還在此房間頁面 
         if (senderId === currentRoomId) {
           addReceiveMessagesElement(chatMsgDOM, message)
         } else {

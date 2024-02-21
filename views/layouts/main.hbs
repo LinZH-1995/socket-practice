@@ -155,7 +155,7 @@
         ul.appendChild(li)
 
         // 取得新上線使用者傳給當前客戶端的未讀訊息數
-        const unreadMsg = messages.filter(msg => msg.receiver === currentUserId).length
+        const unreadMsg = messages.filter(msg => msg.receiver === currentUserId && msg.unread === true).length
         addNotifyElement('private', user._id, null, unreadMsg)
       }
     })

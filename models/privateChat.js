@@ -20,6 +20,11 @@ const privateChatSchema = new Schema({
     index: true
   },
 
+  unread: {
+    type: Boolean,
+    default: true
+  },
+
   createdAt: {
     type: Date,
     default: Date.now

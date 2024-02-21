@@ -141,6 +141,12 @@
       chatMsgDOM.appendChild(div)
     }
 
+    function refreshUnreadMessages(e) {
+      const userId = e.target.dataset.userId
+      // 通知使用者即時更新畫面訊息成已讀
+      socket.emit('refresh unread messages', { userId })
+    }
+
     // 客戶端監聽'add onlineUser'事件
     socket.on('add onlineUser', function ({ user, messages }) {
       const currentUserId = document.querySelector('#logout-button').dataset.userId
@@ -151,7 +157,8 @@
         const ul = document.querySelector('.nav-pills')
         const li = document.createElement('li')
         li.classList.add('nav-item', 'mb-2', `li-${user._id}`)
-        li.innerHTML = `<a class="nav-link" href="/messages/t/${user._id}">${user.name}</a>`
+        li.innerHTML = `<a class="nav-link" href="/messages/t/${user._id}" data-user-id="${user._id}">${user.name}</a>`
+        li.onclick = refreshUnreadMessages
         ul.appendChild(li)
 
         // 取得新上線使用者傳給當前客戶端的未讀訊息數
@@ -206,7 +213,7 @@
       // 發送者是當前客戶端，並且確認使用者是否還在此房間頁面
       if (senderId === currentUserId && receiverId === currentRoomId) {
         addSendMessagesElement(chatMsgDOM, message)
-      } else {
+      } else if (receiverId === currentUserId) {
         // 當前客戶端為接收方，確認使用者是否還在此房間頁面 
         if (senderId === currentRoomId) {
           addReceiveMessagesElement(chatMsgDOM, message)

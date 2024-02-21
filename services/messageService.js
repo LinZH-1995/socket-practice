@@ -7,17 +7,20 @@ const messageService = {
       const currentUserId = req.user._id // me
       const id = req.params.id // user who i wish to talk
 
-      const [user, messages] = await Promise.all([
+      const [user, updateResopnse] = await Promise.all([
         User.findById(id, '-password', { lean: true }).exec(),
-        privateChat.find({
-          $or: [
-            { sender: currentUserId, receiver: id },
-            { sender: id, receiver: currentUserId }
-          ]
-        }).lean().sort({ createdAt: 1 }).exec()
+        privateChat.updateMany({ sender: id, receiver: currentUserId }, { unread: false })
       ])
 
-      console.log('id: ', id, 'cur: ', currentUserId, '||||', user, messages)
+      if (!user || !updateResopnse.acknowledged) throw new Error('使用者不存在 / 更新失敗 !')
+      // 拿出更新後的資料
+      const messages = await privateChat.find({
+        $or: [
+          { sender: currentUserId, receiver: id },
+          { sender: id, receiver: currentUserId }
+        ]
+      }).lean().sort({ createdAt: 1 }).exec()
+
       callback(null, { roomId: id, roomName: user.name, messages })
     } catch (error) {
       callback(error, null)

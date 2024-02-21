@@ -33,6 +33,8 @@ function socketSetting (io) {
       }
     }
 
+    socket.on('refresh unread messages', ({ userId }) => {})
+
     socket.on('post public message', async ({ msg, roomId, senderId }) => {
       try {
         // 對public房間發送訊息
@@ -89,10 +91,8 @@ function socketSetting (io) {
 
         // 是否通過passport驗證，並且與傳入ID相同
         if (id && id === userId) {
-          // onlineUser有記錄使用者
-          if (onlineUser.has(userId)) {
-            // 將使用者從onlineUser中移除
-            onlineUser.delete(userId)
+          // 將使用者從onlineUser中移除
+          if (onlineUser.delete(userId)) {
             // 通知public房間的所有客戶端畫面移除此使用者
             io.to('public').emit('remove onlineUser', userId)
           }

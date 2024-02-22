@@ -22,7 +22,6 @@
           <a class="nav-link {{#ifCond ../roomId this._id}}active{{/ifCond}}" href="/messages/t/{{this._id}}"
             data-user-id="{{this._id}}">
             {{this.name}}
-            <div class="unread-msg-count my-auto">1</div>
           </a>
         </li>
         {{/ifCond}}
@@ -53,7 +52,17 @@
               {{this}}<br>
               {{/each}}
             </div>
-            <div class="time text-muted"><span>{{formatTime this.createdAt}}</span></div>
+            {{#if this.unread}}
+            {{!-- unread = true 未讀 --}}
+            <div class="d-flex message-under-zone unread">
+              <span class="time text-muted">{{formatTime this.createdAt}}</span>
+            </div>
+            {{else}}
+            <div class="d-flex message-under-zone">
+              <span class="readed-msg">已讀</span>
+              <span class="time text-muted">{{formatTime this.createdAt}}</span>
+            </div>
+            {{/if}}
           </div>
           {{else}}
           <div class="receive-messages d-flex flex-column align-items-start mb-3">

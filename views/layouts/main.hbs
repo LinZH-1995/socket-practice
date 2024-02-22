@@ -128,7 +128,9 @@
       const div = document.createElement('div')
       div.classList.add('send-messages', 'd-flex', 'flex-column', 'align-items-end', 'mb-3')
       div.innerHTML = `<div class="send-message">${msg}</div>
-          <div class="time text-muted"><span>${message.createdAt}</span></div>`
+      <div class="d-flex message-under-zone unread">
+        <span class="time text-muted">${message.createdAt}</span>
+      </div>`
       chatMsgDOM.appendChild(div)
     }
 
@@ -142,9 +144,10 @@
     }
 
     function refreshUnreadMessages(e) {
-      const userId = e.target.dataset.userId
+      const senderId = e.target.dataset.userId
+      const receiverId = document.querySelector('#logout-button').dataset.userId
       // 通知使用者即時更新畫面訊息成已讀
-      socket.emit('refresh unread messages', { userId })
+      socket.emit('refresh unread messages', { senderId, receiverId })
     }
 
     // 客戶端監聽'add onlineUser'事件
@@ -163,7 +166,7 @@
 
         // 取得新上線使用者傳給當前客戶端的未讀訊息數
         const unreadMsg = messages.filter(msg => msg.receiver === currentUserId && msg.unread === true).length
-        addNotifyElement('private', user._id, null, unreadMsg)
+        if (unreadMsg !== 0) addNotifyElement('private', user._id, null, unreadMsg)
       }
     })
 
@@ -206,9 +209,8 @@
       const chatMsgDOM = document.querySelector('#msgs')
       // 當前客戶端是誰
       const currentUserId = document.querySelector('#logout-button').dataset.userId
-      // 當前所在房間頁面
+      // 客戶端當前所在房間頁面
       const currentRoomId = document.querySelector('#inputArea').dataset.roomId
-      console.log('test private msg: ', message, senderId, receiverId, currentUserId, currentRoomId)
 
       // 發送者是當前客戶端，並且確認使用者是否還在此房間頁面
       if (senderId === currentUserId && receiverId === currentRoomId) {
@@ -216,10 +218,30 @@
       } else if (receiverId === currentUserId) {
         // 當前客戶端為接收方，確認使用者是否還在此房間頁面 
         if (senderId === currentRoomId) {
+          // 客戶端還在此房間，更新畫面訊息，通知發送者訊息已讀
           addReceiveMessagesElement(chatMsgDOM, message)
+          socket.emit('refresh unread messages immediately', { msgId: message._id, senderId, receiverId })
         } else {
           addNotifyElement('private', senderId, null)
         }
+      }
+    })
+
+    socket.on('refresh unread messages', function ({ senderId, receiverId }) {
+      // 客戶端當前所在房間頁面
+      const currentRoomId = document.querySelector('#inputArea').dataset.roomId
+
+      // 訊息接收者通知客戶端訊息已讀，如不在當前房間，不用額外操作
+      if (receiverId === currentRoomId) {
+        // 選取所有的<div class="message-under-zone unread">...</div>
+        const zone = document.querySelectorAll('.message-under-zone.unread')
+        zone.forEach(element => {
+          const span = document.createElement('span')
+          span.className = 'readed-msg'
+          span.textContent = '已讀' // <span class="readed-msg">已讀</span>
+          element.classList.remove('unread') //<div class="message-under-zone">...</div>
+          element.prepend(span)
+        })
       }
     })
   </script>

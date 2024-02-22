@@ -33,7 +33,19 @@ function socketSetting (io) {
       }
     }
 
-    socket.on('refresh unread messages', ({ userId }) => {})
+    socket.on('refresh unread messages', ({ senderId, receiverId }) => {
+      io.to(senderId).emit('refresh unread messages', { senderId, receiverId })
+    })
+
+    socket.on('refresh unread messages immediately', async ({ msgId, senderId, receiverId }) => {
+      try {
+        const msg = await privateChat.findByIdAndUpdate(msgId, { unread: false }, { new: true })
+        if (msg.unread) throw new Error('訊息更新失敗 !')
+        io.to(senderId).emit('refresh unread messages', { senderId, receiverId })
+      } catch (error) {
+        console.log(error)
+      }
+    })
 
     socket.on('post public message', async ({ msg, roomId, senderId }) => {
       try {

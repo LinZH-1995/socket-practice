@@ -51,14 +51,13 @@
 
     function postMessage(element) {
       const msg = element.value.trim().split(/\n/g) //以換行符號分割訊息， ['msg', 'msg']
-      const senderId = element.dataset.senderId // 發送者是誰
       const roomId = element.dataset.roomId // 對哪個房間發送消息，除public外，等同訊息receiverId
       if (roomId === 'public') {
         // 告訴server端，客戶端打算新增 public 訊息
-        socket.emit('post public message', { msg, roomId, senderId })
+        socket.emit('post public message', { msg })
       } else {
         // 告訴server端，客戶端打算新增 private 訊息
-        socket.emit('post private message', { msg, receiverId: roomId, senderId })
+        socket.emit('post private message', { msg, receiverId: roomId })
       }
       element.value = '' // 清空訊息
     }
@@ -85,7 +84,7 @@
       // 如果是enter + shift = 使用者想讓輸入的訊息換行
     }
 
-    function addNotifyElement(messageType, senderId, currentUserId, unreadMsg) {
+    function addNotifyElement(messageType, senderId, unreadMsg) {
       // 公共訊息
       if (messageType === 'public') {
         // 使用者畫面不同，提示使用者有新訊息 (已有提示則不新增)
@@ -98,7 +97,7 @@
           a.appendChild(div)
 
           // 記錄使用者有public未讀訊息，避免畫面更新後消失
-          socket.emit('add user public message notify', { currentUserId })
+          socket.emit('add user public message notify')
         }
         return
       }
@@ -118,14 +117,19 @@
       }
     }
 
-    function addSendMessagesElement(chatMsgDOM, message) {
+    function addSendMessagesElement(chatMsgDOM, message, roomId) {
       const msg = message.content.join('<br/>')
       const div = document.createElement('div')
       div.classList.add('send-messages', 'd-flex', 'flex-column', 'align-items-end', 'mb-3')
-      div.innerHTML = `<div class="send-message">${msg}</div>
-      <div class="d-flex message-under-zone unread">
-        <span class="time text-muted">${message.createdAt}</span>
-      </div>`
+      if (roomId === 'public') {
+        div.innerHTML = `<div class="send-message">${msg}</div>
+        <span class="time text-muted">${message.createdAt}</span>`
+      } else {
+        div.innerHTML = `<div class="send-message">${msg}</div>
+        <div class="d-flex message-under-zone unread">
+          <span class="time text-muted">${message.createdAt}</span>
+        </div>`
+      }
       chatMsgDOM.appendChild(div)
     }
 
@@ -161,7 +165,7 @@
 
         // 取得新上線使用者傳給當前客戶端的未讀訊息數
         const unreadMsg = messages.filter(msg => msg.receiver === currentUserId && msg.unread === true).length
-        if (unreadMsg !== 0) addNotifyElement('private', user._id, null, unreadMsg)
+        if (unreadMsg !== 0) addNotifyElement('private', user._id, unreadMsg)
       }
     })
 
@@ -177,7 +181,8 @@
     })
 
     // 客戶端收到新增 public 訊息事件
-    socket.on('add public message', function ({ message, senderId, roomId }) {
+    socket.on('add public message', function ({ message }) {
+      const senderId = message.sender // 訊息發送者
       const chatMsgDOM = document.querySelector('#msgs')
       // 當前客戶端是誰
       const currentUserId = document.querySelector('#logout-button').dataset.userId
@@ -188,7 +193,7 @@
       if (currentRoomId === 'public') {
         if (senderId === currentUserId) {
           // 本人發出的訊息
-          addSendMessagesElement(chatMsgDOM, message)
+          addSendMessagesElement(chatMsgDOM, message, 'public')
         } else {
           // 非本人發出的訊息
           addReceiveMessagesElement(chatMsgDOM, message)
@@ -196,7 +201,7 @@
         return
       }
 
-      addNotifyElement('public', null, currentUserId)
+      addNotifyElement('public', null, null)
     })
 
     // 客戶端收到新增 private 訊息事件
@@ -209,7 +214,7 @@
 
       // 發送者是當前客戶端，並且確認使用者是否還在此房間頁面
       if (senderId === currentUserId && receiverId === currentRoomId) {
-        addSendMessagesElement(chatMsgDOM, message)
+        addSendMessagesElement(chatMsgDOM, message, currentRoomId)
       } else if (receiverId === currentUserId) {
         // 當前客戶端為接收方，確認使用者是否還在此房間頁面 
         if (senderId === currentRoomId) {

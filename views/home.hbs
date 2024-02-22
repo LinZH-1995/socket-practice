@@ -52,17 +52,17 @@
               {{this}}<br>
               {{/each}}
             </div>
-            {{#if this.unread}}
-            {{!-- unread = true 未讀 --}}
-            <div class="d-flex message-under-zone unread">
-              <span class="time text-muted">{{formatTime this.createdAt}}</span>
-            </div>
-            {{else}}
+            {{#ifCond this.unread 'false'}}
             <div class="d-flex message-under-zone">
               <span class="readed-msg">已讀</span>
               <span class="time text-muted">{{formatTime this.createdAt}}</span>
             </div>
-            {{/if}}
+            {{else}}
+            {{!-- unread = true 未讀 --}}
+            <div class="d-flex message-under-zone unread">
+              <span class="time text-muted">{{formatTime this.createdAt}}</span>
+            </div>
+            {{/ifCond}}
           </div>
           {{else}}
           <div class="receive-messages d-flex flex-column align-items-start mb-3">

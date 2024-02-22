@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 
 function ifCond (a, b, options) {
-  return a.toString() === b.toString() ? options.fn(this) : options.inverse(this)
+  return a?.toString() === b?.toString() ? options.fn(this) : options.inverse(this)
 }
 
 function formatTime (time) {

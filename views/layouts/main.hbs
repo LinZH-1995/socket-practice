@@ -25,7 +25,7 @@
           </div>
           {{#if isAuthenticated}}
           <a id="logout-button" href="/logout" class="btn btn-sm btn-outline-danger my-auto my-sm-0 logout-button"
-            data-user-id="{{user._id}}">Logout</a>
+            data-user-id="{{user._id}}" onclick="logout()">Logout</a>
           {{/if}}
         </div>
       </div>
@@ -44,14 +44,9 @@
   <script>
     const socket = io()
 
-    // 綁定'click'事件給登出按鈕，當使用者按下登出時做甚麼
-    const logoutButton = document.querySelector('.logout-button')
-    if (logoutButton) {
-      logoutButton.addEventListener('click', function (e) {
-        const userId = e.target.dataset.userId
-        // 對server端發送'logout'事件，傳入使用者ID
-        socket.emit('logout', userId)
-      })
+    function logout() {
+      // 對server端發送'logout'事件，傳入使用者ID
+      socket.emit('logout')
     }
 
     function postMessage(element) {

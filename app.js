@@ -10,7 +10,7 @@ import { Server } from 'socket.io'
 import { router } from './routes/index.js'
 import { ifCond, formatTime } from './helpers/hbs-helper.js'
 import { passport } from './config/passport.js'
-import { socketSetting, onlineUser } from './socket.js'
+import { socketSetting, onlyForHandshake, onlineUser } from './socket.js'
 
 // Variables
 const app = express() // 建立express app
@@ -27,7 +27,7 @@ const io = new Server(server, {
 const sessionMiddleware = expressSession({
   name: 'MY_SESSION',
   secret: 'abcdefg',
-  resave: false,
+  resave: true,
   saveUninitialized: false,
   cookie: { maxAge: 1200000 }
 })
@@ -43,7 +43,19 @@ app.use(sessionMiddleware)
 app.use(passport.initialize())
 app.use(passport.session())
 
-io.engine.use(sessionMiddleware)
+io.engine.use(onlyForHandshake(sessionMiddleware))
+io.engine.use(onlyForHandshake(passport.session()))
+io.engine.use(
+  onlyForHandshake((req, res, next) => {
+    if (req.user) {
+      next()
+    } else {
+      res.writeHead(401)
+      res.end()
+    }
+  })
+)
+
 socketSetting(io)
 
 app.use((req, res, next) => {

@@ -5,31 +5,39 @@ import { formatTime } from './helpers/hbs-helper.js'
 
 const onlineUser = new Map()
 
+function onlyForHandshake (middleware) {
+  return (req, res, next) => {
+    console.log(req._query.sid)
+    const isHandshake = req._query.sid === undefined
+    if (isHandshake) {
+      middleware(req, res, next)
+    } else {
+      next()
+    }
+  }
+}
+
 function socketSetting (io) {
   io.on('connection', async (socket) => {
-    const session = socket.request.session
-    const currentUserId = session.passport?.user
-
+    // const session = socket.request.session
+    const currentUser = socket.request.user
+    const currentUserId = currentUser?._id.toString()
+    currentUser._id = currentUserId
+    console.log(currentUser)
     // 是否通過passport驗證，避免未登入者顯示在其他使用者畫面上
     if (currentUserId) {
       // 所有登入使用者自動加入'public'房間，與使用者ID的房間
       socket.join(['public', currentUserId])
-      console.log('in rooms: ', socket.rooms, 'this socketid: ', socket.id)
 
-      const userId = session.passport.user
-      // 從DB拿資料，不拿password欄位，返回js物件非mongoose document
-      // exec()回傳 real Promise 方便追蹤error
-      const [user, messages] = await Promise.all([
-        User.findById(userId, '-password', { lean: true }).exec(),
-        privateChat.find({ sender: userId }).lean().exec() // 登入者發送過得所有訊息
-      ])
+      // 從DB拿資料，返回js物件非mongoose document，exec()回傳 real Promise 方便追蹤error
+      const messages = await privateChat.find({ sender: currentUserId }).lean().exec() // 登入者發送過得所有訊息
 
       // 使用者存在並且onlineUser沒記錄使用者
-      if (user && !onlineUser.has(userId)) {
+      if (!onlineUser.has(currentUserId)) {
         // 將使用者加入onlineUser
-        onlineUser.set(userId, { ...user, _id: user._id.toString() })
+        onlineUser.set(currentUserId, currentUser)
         // 通知public房間的所有客戶端'add onlineUser'事件，傳入user資料
-        socket.to('public').emit('add onlineUser', { user, messages })
+        socket.to('public').emit('add onlineUser', { currentUser, messages })
       }
     }
 
@@ -95,27 +103,16 @@ function socketSetting (io) {
     })
 
     // 監聽'logout'事件，使用者登出時做甚麼
-    socket.on('logout', async (userId) => {
-      try {
-        const id = session.passport?.user
-        // 拿使用者資料，除id只拿name欄位
-        const user = await User.findById(userId, 'name email', { lean: true })
-
-        // 是否通過passport驗證，並且與傳入ID相同
-        if (id && id === userId) {
-          // 將使用者從onlineUser中移除
-          if (onlineUser.delete(userId)) {
-            // 通知public房間的所有客戶端畫面移除此使用者
-            io.to('public').emit('remove onlineUser', userId)
-          }
-
-          // 使當前socket離線
-          socket.disconnect()
-          console.log(`user: ${user.name} logout`)
-        }
-      } catch (error) {
-        console.log(error)
+    socket.on('logout', () => {
+      // 將使用者從onlineUser中移除
+      if (onlineUser.delete(currentUserId)) {
+        // 通知public房間的所有客戶端畫面移除此使用者
+        io.to('public').emit('remove onlineUser', currentUserId)
       }
+
+      // 使當前socket離線
+      socket.disconnect()
+      console.log(`user: ${currentUser.name} logout`)
     })
 
     // 監聽'disconnect'事件
@@ -129,4 +126,4 @@ function socketSetting (io) {
   })
 }
 
-export { onlineUser, socketSetting }
+export { onlineUser, onlyForHandshake, socketSetting }

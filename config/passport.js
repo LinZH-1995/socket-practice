@@ -24,7 +24,12 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    const user = await User.findById(id, '-password', { lean: true }) // exclude password field and call lean()
+    const user = await User.findById(id, '-password', { lean: true }).populate({
+      path: 'friends', // populate relation data for friends field
+      select: 'id name', // only include 'id' and 'name' field
+      options: { sort: { name: 1 } } // sort by 'name' asc
+    }).exec()
+
     done(null, user)
   } catch (error) {
     done(error, null)

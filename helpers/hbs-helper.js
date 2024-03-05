@@ -8,8 +8,8 @@ function formatTime (time) {
   return dayjs(time).format('YYYY-MM-DD HH:mm')
 }
 
-function isFriend (currentUserfriends, userId, options) {
-  const result = currentUserfriends.some(friend => friend.toString() === userId)
+function isFriend (currentUserfriendsId, userId, options) {
+  const result = currentUserfriendsId.some(friendId => friendId.toString() === userId)
   return result ? options.fn(this) : options.inverse(this)
 }
 

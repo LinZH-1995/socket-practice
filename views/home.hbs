@@ -13,6 +13,20 @@
             {{/if}}
           </a>
         </li>
+        <li class="nav-item mb-2">
+          <a class="nav-link disabled" aria-disabled="true">好友: </a>
+        </li>
+        {{#each userFriends}}
+        <li class="nav-item mb-2 li-{{this._id}}" onclick="refreshUnreadMessages(event)">
+          <a class="nav-link {{#ifCond ../roomId this._id}}active{{/ifCond}}" href="/messages/t/{{this._id}}"
+            data-user-id="{{this._id}}">
+            {{this.name}}
+            {{#if this.unreadCount}}
+            <div class="unread-msg-count my-auto">{{this.unreadCount}}</div>
+            {{/if}}
+          </a>
+        </li>
+        {{/each}}
       </ul>
     </div>
 
@@ -28,10 +42,9 @@
       </div>
 
       <div class="row room-block">
-        <!-- 新增顯示線上使用者的區塊 -->
+        <!-- 公開聊天室才顯示線上使用者的區塊 -->
+        {{#ifCond roomId 'public'}}
         <div class="online-users col-3">
-          <!-- 這裡可以放您想要顯示的線上使用者列表 -->
-          <!-- 例如： -->
           <p>線上使用者：</p>
           <ul class="online-users-list" style="list-style: none;">
             {{#each onlineUser}}
@@ -53,12 +66,13 @@
             {{/each}}
           </ul>
         </div>
+        {{/ifCond}}
 
-        <div class="chat-messages col-9" id="chat-messages">
+        <div class="chat-messages {{#ifCond roomId 'public'}}col-9{{else}}col-12{{/ifCond}}" id="chat-messages">
           <div class="autoscrollable-content" id="msgs">
             {{#each messages}}
             {{#ifCond ../user._id this.sender}}
-            <div class="send-messages d-flex flex-column align-items-end mb-3">
+            <div class="send-messages mb-3">
               <div class="send-message">
                 {{!-- this.content = ['msg', 'msg', ...] --}}
                 {{#each this.content}}
@@ -79,7 +93,7 @@
               {{/ifCond}}
             </div>
             {{else}}
-            <div class="receive-messages d-flex flex-column align-items-start mb-3">
+            <div class="receive-messages mb-3">
               <div class="receive-message">
                 {{!-- this.content = ['msg', 'msg', ...] --}}
                 {{#each this.content}}

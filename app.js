@@ -62,6 +62,7 @@ app.use((req, res, next) => {
   // views所需資料放進res.locals
   res.locals.isAuthenticated = req.isAuthenticated()
   res.locals.user = req.user
+  res.locals.userFriends = req.user?.friends
   res.locals.onlineUser = [...onlineUser.values()]
   next()
 })

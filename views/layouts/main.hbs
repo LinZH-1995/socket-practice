@@ -120,7 +120,7 @@
     function addSendMessagesElement(chatMsgDOM, message, roomId) {
       const msg = message.content.join('<br/>')
       const div = document.createElement('div')
-      div.classList.add('send-messages', 'd-flex', 'flex-column', 'align-items-end', 'mb-3')
+      div.classList.add('send-messages', 'mb-3')
       if (roomId === 'public') {
         div.innerHTML = `<div class="send-message">${msg}</div>
         <span class="time text-muted">${message.createdAt}</span>`
@@ -136,7 +136,7 @@
     function addReceiveMessagesElement(chatMsgDOM, message) {
       const msg = message.content.join('<br/>')
       const div = document.createElement('div')
-      div.classList.add('receive-messages', 'd-flex', 'flex-column', 'align-items-start', 'mb-3')
+      div.classList.add('receive-messages', 'mb-3')
       div.innerHTML = `<div class="receive-message">${msg}</div>
           <div class="time text-muted"><span>${message.createdAt}</span></div>`
       chatMsgDOM.appendChild(div)
@@ -167,7 +167,7 @@
       const currentRoomId = document.querySelector('#inputArea').dataset.roomId
 
       // 上線使用者的好友名單中是否有我
-      const isFriend = user.friends.some(friend => friend.toString() === currentUserId)
+      const isFriend = user.friends.some(friend => friend._id.toString() === currentUserId)
 
       // 確認不是上線的使用者收到此訊息，避免重複(上線使用者會自動取得最新畫面不必再次更新)
       if (currentUserId !== user._id && currentRoomId === 'public') {
@@ -196,7 +196,7 @@
     // 客戶端監聽'remove onlineUser'事件
     socket.on('remove onlineUser', function (logoutUserId) {
       //const currentRoomId = document.querySelector('#inputArea').dataset.roomId
-      const item = document.querySelector(`.li-${logoutUserId}`) // 選取li元素
+      const item = document.querySelector(`.online-user.li-${logoutUserId}`) // 選取li元素
       item.remove() // 刪除元素
 
       // 客戶端當前所在房間與離線使用者相同

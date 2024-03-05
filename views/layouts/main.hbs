@@ -149,35 +149,59 @@
       socket.emit('refresh unread messages', { senderId, receiverId })
     }
 
+    function addFriend(e) {
+      const friendId = e.target.dataset.userId
+      socket.emit('add friend', { friendId })
+    }
+
+    // 新增好友後，移除按鈕
+    socket.on('remove add friend button', function ({ senderId, receiverId }) {
+      const currentUserId = document.querySelector('#logout-button').dataset.userId
+      const li = currentUserId === senderId ? document.querySelector(`.li-${receiverId}`) : document.querySelector(`.li-${senderId}`)
+      li.lastElementChild.remove()
+    })
+
     // 客戶端監聽'add onlineUser'事件
     socket.on('add onlineUser', function ({ user, messages }) {
       const currentUserId = document.querySelector('#logout-button').dataset.userId
+      const currentRoomId = document.querySelector('#inputArea').dataset.roomId
+
+      // 上線使用者的好友名單中是否有我
+      const isFriend = user.friends.some(friend => friend.toString() === currentUserId)
 
       // 確認不是上線的使用者收到此訊息，避免重複(上線使用者會自動取得最新畫面不必再次更新)
-      if (currentUserId !== user._id) {
+      if (currentUserId !== user._id && currentRoomId === 'public') {
         // DOM操作更新畫面
-        const ul = document.querySelector('.nav-pills')
+        const ul = document.querySelector('.online-users-list')
         const li = document.createElement('li')
-        li.classList.add('nav-item', 'mb-2', `li-${user._id}`)
-        li.innerHTML = `<a class="nav-link" href="/messages/t/${user._id}" data-user-id="${user._id}">${user.name}</a>`
-        li.onclick = refreshUnreadMessages
+        li.classList.add('online-user', `li-${user._id}`)
+
+        if (isFriend) {
+          li.innerHTML = `<span>${user.name}</span>`
+        } else {
+          li.innerHTML = `
+          <span>${user.name}</span>
+          <button class="add-friend-button btn btn-sm btn-secondary rounded-circle" onclick="addFriend(event)">
+            <i class="fa-solid fa-plus" data-user-id="${user._id}"></i>
+          </button>`
+        }
         ul.appendChild(li)
 
         // 取得新上線使用者傳給當前客戶端的未讀訊息數
-        const unreadMsg = messages.filter(msg => msg.receiver === currentUserId && msg.unread === true).length
-        if (unreadMsg !== 0) addNotifyElement('private', user._id, unreadMsg)
+        //const unreadMsg = messages.filter(msg => msg.receiver === currentUserId && msg.unread === true).length
+        //if (unreadMsg !== 0) addNotifyElement('private', user._id, unreadMsg)
       }
     })
 
     // 客戶端監聽'remove onlineUser'事件
     socket.on('remove onlineUser', function (logoutUserId) {
-      const currentRoomId = document.querySelector('#inputArea').dataset.roomId
+      //const currentRoomId = document.querySelector('#inputArea').dataset.roomId
       const item = document.querySelector(`.li-${logoutUserId}`) // 選取li元素
       item.remove() // 刪除元素
 
       // 客戶端當前所在房間與離線使用者相同
       // 使用者離線後，將客戶端重新導向
-      if (currentRoomId === logoutUserId) window.location.href = '/home'
+      //if (currentRoomId === logoutUserId) window.location.href = '/home'
     })
 
     // 客戶端收到新增 public 訊息事件

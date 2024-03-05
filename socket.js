@@ -42,6 +42,27 @@ function socketSetting (io) {
       }
     }
 
+    socket.on('add friend', async ({ friendId }) => {
+      try {
+        const isFriend = currentUser.friends.some(friend => friend.toString() === friendId)
+        if (isFriend) throw new Error('已經是好友 !')
+
+        const [friend, user] = await Promise.all([
+          User.findById(friendId),
+          User.findById(currentUserId)
+        ])
+        if (!friend) throw new Error('使用者不存在 !')
+
+        friend.friends.push(user)
+        user.friends.push(friend)
+        await User.bulkSave([friend, user])
+
+        io.to([currentUserId, friendId]).emit('remove add friend button', { senderId: currentUserId, receiverId: friendId })
+      } catch (error) {
+        console.log(error)
+      }
+    })
+
     socket.on('refresh unread messages', ({ senderId, receiverId }) => {
       io.to(senderId).emit('refresh unread messages', { senderId, receiverId })
     })

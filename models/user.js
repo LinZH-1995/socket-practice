@@ -21,6 +21,8 @@ const userSchema = new Schema({
     default: false
   },
 
+  friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+
   createdAt: {
     type: Date,
     default: Date.now

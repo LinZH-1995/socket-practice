@@ -8,7 +8,7 @@ import { Server } from 'socket.io'
 
 // Folders
 import { router } from './routes/index.js'
-import { ifCond, formatTime } from './helpers/hbs-helper.js'
+import { ifCond, formatTime, isFriend } from './helpers/hbs-helper.js'
 import { passport } from './config/passport.js'
 import { socketSetting, onlyForHandshake, onlineUser } from './socket.js'
 
@@ -33,7 +33,7 @@ const sessionMiddleware = expressSession({
 })
 
 // Settings
-app.engine('hbs', engine({ defaultLayout: 'main', extname: '.hbs', helpers: { ifCond, formatTime } }))
+app.engine('hbs', engine({ defaultLayout: 'main', extname: '.hbs', helpers: { ifCond, formatTime, isFriend } }))
 app.set('view engine', 'hbs')
 
 app.use(express.static('public'))

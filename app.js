@@ -2,6 +2,7 @@
 import express from 'express'
 import methodOverrirde from 'method-override'
 import expressSession from 'express-session'
+import connectMongoDBSession from 'connect-mongodb-session'
 import { engine } from 'express-handlebars'
 import { createServer } from 'node:http'
 import { Server } from 'socket.io'
@@ -24,7 +25,12 @@ const io = new Server(server, {
   }
 })
 
-const sessionStore = new expressSession.MemoryStore()
+const MongoDBStore = connectMongoDBSession(expressSession)
+const sessionStore = new MongoDBStore({
+  uri: process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/socket-practice-db',
+  collection: 'mySessions',
+  expires: 1200000
+})
 const sessionMiddleware = expressSession({
   name: 'MY_SESSION',
   secret: 'abcdefg',

@@ -22,6 +22,7 @@
   "description": "my socket practice",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "connect-mongodb-session": "^5.0.0",
     "dayjs": "^1.11.10",
     "express": "^4.18.2",
     "express-handlebars": "^7.1.2",

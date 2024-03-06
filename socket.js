@@ -7,7 +7,6 @@ const onlineUser = new Map()
 
 function onlyForHandshake (middleware) {
   return (req, res, next) => {
-    console.log(req._query.sid)
     const isHandshake = req._query.sid === undefined
     if (isHandshake) {
       middleware(req, res, next)
@@ -17,9 +16,14 @@ function onlyForHandshake (middleware) {
   }
 }
 
-function socketSetting (io) {
+function isSessionExpired (session) {
+  if (!session) return false
+  // 檢查 session 是否過期
+  return new Date(session.cookie.expires) < new Date()
+}
+
+function socketSetting (io, sessionStore) {
   io.on('connection', async (socket) => {
-    // const session = socket.request.session
     const currentUser = socket.request.user
     const currentUserId = currentUser?._id.toString()
     currentUser._id = currentUserId
@@ -30,15 +34,44 @@ function socketSetting (io) {
       // 所有登入使用者自動加入'public'房間，與使用者ID的房間
       socket.join(['public', currentUserId])
 
-      // 從DB拿資料，返回js物件非mongoose document，exec()回傳 real Promise 方便追蹤error
-      const messages = await privateChat.find({ sender: currentUserId }).lean().exec() // 登入者發送過得所有訊息
-
       // 使用者存在並且onlineUser沒記錄使用者
       if (!onlineUser.has(currentUserId)) {
+        // 從DB拿登入者發送過得所有私人訊息，返回js物件非mongoose document，exec()回傳 real Promise 方便追蹤error
+        const messages = await privateChat.find({ sender: currentUserId }).lean().exec()
+
         // 將使用者加入onlineUser
-        onlineUser.set(currentUserId, currentUser)
+        onlineUser.set(currentUserId, { _id: currentUserId, name: currentUser.name })
         // 通知public房間的所有客戶端'add onlineUser'事件，傳入user資料
         socket.to('public').emit('add onlineUser', { user: currentUser, messages })
+
+        // 使用者首次上線時，通知其所有好友
+        const friendsId = currentUser.friends.map(friend => friend._id.toString())
+        socket.to(friendsId).emit('notify friend online', { userId: currentUserId })
+
+        // 使用者首次上線時，設定一個定時查看session是否過期的計時器 (10min)
+        setInterval(() => {
+          sessionStore.get(socket.request.sessionID, (error, session) => {
+            if (error) {
+              console.log('Error getting session:', error)
+            } else {
+              // 取得最新session，檢查其過期時間，session可能為null/undefined
+              if (isSessionExpired(session)) {
+                // session已過期
+                if (onlineUser.delete(currentUserId)) {
+                  // 通知public房間的所有客戶端畫面移除此使用者
+                  socket.to('public').emit('remove onlineUser', currentUserId)
+
+                  // 使用者離線時，通知其所有好友
+                  const friendsId = currentUser.friends.map(friend => friend._id.toString())
+                  socket.to(friendsId).emit('notify friend offline', { userId: currentUserId })
+
+                  // 然後斷開連接
+                  socket.disconnect()
+                }
+              }
+            }
+          })
+        }, 600000)
       }
     }
 
@@ -124,7 +157,11 @@ function socketSetting (io) {
       // 將使用者從onlineUser中移除
       if (onlineUser.delete(currentUserId)) {
         // 通知public房間的所有客戶端畫面移除此使用者
-        io.to('public').emit('remove onlineUser', currentUserId)
+        socket.to('public').emit('remove onlineUser', currentUserId)
+
+        // 使用者離線時，通知其所有好友
+        const friendsId = currentUser.friends.map(friend => friend._id.toString())
+        socket.to(friendsId).emit('notify friend offline', { userId: currentUserId })
       }
 
       // 使當前socket離線

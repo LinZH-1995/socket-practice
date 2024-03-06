@@ -1,11 +1,14 @@
 import { User } from '../models/user.js'
 import { publicChat } from '../models/publicChat.js'
 import { privateChat } from '../models/privateChat.js'
+import { onlineUser } from '../socket.js'
 
 const homeService = {
   getHome: async (req, callback) => {
     try {
       const userId = req.user._id
+      const userFriends = req.user.friends
+
       const [user, messages, unreadMessages] = await Promise.all([
         // 進入public房間，將 publicNotify 改為false，new = true 返回更新後的資料
         User.findByIdAndUpdate(userId, { publicNotify: false }, { new: true, lean: true }).exec(),
@@ -21,11 +24,13 @@ const homeService = {
 
       // 有未讀私人訊息
       if (unreadMessages.length !== 0) {
-        req.user.friends.forEach(friend => {
+        userFriends.forEach(friend => {
           const unreadUser = unreadMessages.find(msg => msg._id.toString() === friend._id.toString())
           if (unreadUser) friend.unreadCount = unreadUser.count
         })
       }
+
+      userFriends.forEach(friend => { friend.isOnline = onlineUser.has(friend._id.toString()) })
 
       callback(null, { user, messages, roomId: 'public' })
     } catch (error) {

@@ -24,12 +24,15 @@ const io = new Server(server, {
   }
 })
 
+const sessionStore = new expressSession.MemoryStore()
 const sessionMiddleware = expressSession({
   name: 'MY_SESSION',
   secret: 'abcdefg',
-  resave: true,
+  resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1200000 }
+  cookie: { maxAge: 1200000 },
+  rolling: true,
+  store: sessionStore
 })
 
 // Settings
@@ -56,7 +59,7 @@ io.engine.use(
   })
 )
 
-socketSetting(io)
+socketSetting(io, sessionStore)
 
 app.use((req, res, next) => {
   // views所需資料放進res.locals

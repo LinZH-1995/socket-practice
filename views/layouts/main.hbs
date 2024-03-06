@@ -103,7 +103,7 @@
       }
 
       // 私人訊息
-      const notifyElement = document.querySelector(`.li-${senderId} > a > div`)
+      const notifyElement = document.querySelector(`.li-${senderId} > a > div.unread-msg-count`)
       // 已有通知element
       if (notifyElement) {
         const num = notifyElement.textContent // string num
@@ -154,6 +154,18 @@
       socket.emit('add friend', { friendId })
     }
 
+    socket.on('notify friend online', function ({ userId }) {
+      const dot = document.querySelector(`.li-${userId} > a > div > div.status-dot`)
+      dot.classList.remove('offline')
+      dot.classList.add('online')
+    })
+
+    socket.on('notify friend offline', function ({ userId }) {
+      const dot = document.querySelector(`.li-${userId} > a > div > div.status-dot`)
+      dot.classList.remove('online')
+      dot.classList.add('offline')
+    })
+
     // 新增好友後，移除按鈕
     socket.on('remove add friend button', function ({ senderId, receiverId }) {
       const currentUserId = document.querySelector('#logout-button').dataset.userId
@@ -186,10 +198,6 @@
           </button>`
         }
         ul.appendChild(li)
-
-        // 取得新上線使用者傳給當前客戶端的未讀訊息數
-        //const unreadMsg = messages.filter(msg => msg.receiver === currentUserId && msg.unread === true).length
-        //if (unreadMsg !== 0) addNotifyElement('private', user._id, unreadMsg)
       }
     })
 

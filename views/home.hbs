@@ -20,7 +20,10 @@
         <li class="nav-item mb-2 li-{{this._id}}" onclick="refreshUnreadMessages(event)">
           <a class="nav-link {{#ifCond ../roomId this._id}}active{{/ifCond}}" href="/messages/t/{{this._id}}"
             data-user-id="{{this._id}}">
-            {{this.name}}
+            <div data-user-id="{{this._id}}">
+              <div class="status-dot {{#if this.isOnline}}online{{else}}offline{{/if}}" data-user-id="{{this._id}}"></div>
+              {{this.name}}
+            </div>
             {{#if this.unreadCount}}
             <div class="unread-msg-count my-auto">{{this.unreadCount}}</div>
             {{/if}}
